@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 import json
 from openai import OpenAI, AsyncOpenAI
+from dotenv import load_dotenv
 
 
 class Message(BaseModel):
