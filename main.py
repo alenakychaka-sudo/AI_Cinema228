@@ -15,7 +15,10 @@ class BotRequest(BaseModel):
 
 app = FastAPI()
 
-ai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+ai_client = AsyncOpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 @app.get("/ping")
 
 async def ping_server():
