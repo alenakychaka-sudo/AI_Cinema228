@@ -1,8 +1,10 @@
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 import json
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
+
 
 class Message(BaseModel):
     question: str
@@ -13,6 +15,7 @@ class BotRequest(BaseModel):
 
 app = FastAPI()
 
+ai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 @app.get("/ping")
 
 async def ping_server():
@@ -27,7 +30,4 @@ async def process_chat(request: BotRequest):
     for msg in request.consversion:
         massege_for_ai.append({"role": "assistant", "content": msg.question})
         massege_for_ai.append({"role": "user", "content": msg.answer})
-    return {
-        "status": "success",
-        "message": f"Юзер {request.user_id} прислал {histori_lenght} сообщений"
-    }
+    return {"result": massege_for_ai}
