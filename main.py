@@ -43,4 +43,17 @@ async def process_chat(request: BotRequest):
     for msg in request.consversion:
         massege_for_ai.append({"role": "assistant", "content": msg.question})
         massege_for_ai.append({"role": "user", "content": msg.answer})
-    return {"result": massege_for_ai}
+
+    response = await ai_client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=massege_for_ai,
+        response_format={"type": "json_object"},
+        temperature=0.7
+    )
+    ai_answer_text = response.choices[0].message.content
+
+    # 3. Превращаем текст в настоящий Python-словарь с помощью библиотеки json
+    result = json.loads(ai_answer_text)
+
+    # 4. Отдаем результат Телеграм-боту!
+    return result
