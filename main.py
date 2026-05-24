@@ -45,7 +45,7 @@ async def process_chat(request: BotRequest):
         massege_for_ai.append({"role": "user", "content": msg.answer})
 
     response = await ai_client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=massege_for_ai,
         response_format={"type": "json_object"},
         temperature=0.7
