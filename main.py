@@ -30,7 +30,9 @@ async def ping_server():
 async def process_chat(request: BotRequest):
     histori_lenght = len(request.consversion)
     massege_for_ai = [
-        {"role": "system", "content": "Ты бот Кинотавр. Узнай настроение пользователя и порекомендуй фильм."}
+        {"role": "system",
+         "content": "Ты бот Кинотавр. Узнай настроение пользователя и порекомендуй фильм. ОТВЕЧАЙ СТРОГО В ФОРМАТЕ JSON: {\"action\": \"ask\" или \"recommend\", \"text\": \"твой ответ\"}"
+         }
     ]
     response = await ai_client.chat.completions.create(
         model="llama3-8b-8192",
