@@ -30,6 +30,12 @@ async def process_chat(request: BotRequest):
     massege_for_ai = [
         {"role": "system", "content": "Ты бот Кинотавр. Узнай настроение пользователя и порекомендуй фильм."}
     ]
+    response = await ai_client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=massege_for_ai,
+        response_format={"type": "json_object"},
+        temperature=0.7
+    )
     for msg in request.consversion:
         massege_for_ai.append({"role": "assistant", "content": msg.question})
         massege_for_ai.append({"role": "user", "content": msg.answer})
