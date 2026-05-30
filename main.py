@@ -114,5 +114,32 @@ async def process_chat(request: BotRequest):
     # 3. Превращаем текст в настоящий Python-словарь с помощью библиотеки json
     result = json.loads(ai_answer_text)
 
+    # Если AI определил цвет настроения, достаем фильм из базы
+    if result.get("action") == "recommend" and result.get("color"):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            query = """
+                     SELECT m.* FROM movies m
+                     JOIN movie_colors mc ON m.id = mc.movie_id
+                     JOIN colors c ON mc.color_id = c.id
+                     WHERE c.color_name = %s
+                     ORDER BY RANDOM()
+                     LIMIT 1;
+                 """
+            cursor.execute(query, (result["color"],))
+            movie = cursor.fetchone()
+            cursor.close()
+            conn.close()
+
+            if movie:
+                result["movie"] = dict(movie)
+            else:
+                result["movie"] = None
+        except Exception as e:
+            result["movie"] = None
+            result["db_error"] = str(e)
+
     # 4. Отдаем результат Телеграм-боту!
     return result
