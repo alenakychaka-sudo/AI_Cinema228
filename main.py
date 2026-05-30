@@ -146,3 +146,17 @@ async def process_chat(request: BotRequest):
 
     # 4. Отдаем результат Телеграм-боту!
     return result
+
+ # Дополнительный эндпоинт для получения всех цветов
+  @app.get('/colors')
+  async def get_colors():
+      try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute("SELECT id, color_name, hex_code, mood_description FROM colors;")
+          colors = cursor.fetchall()
+          cursor.close()
+          conn.close()
+          return {"colors": [dict(c) for c in colors]}
+      except Exception as e:
+          return {"error": str(e)}
