@@ -5,6 +5,8 @@ from typing import Optional
 import json
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 load_dotenv()
 
