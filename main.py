@@ -10,6 +10,8 @@ from psycopg2.extras import RealDictCursor
 
 load_dotenv()
 
+db_pool = None
+
 class Message(BaseModel):
     question: str
     answer: str
