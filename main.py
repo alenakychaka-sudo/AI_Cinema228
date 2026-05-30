@@ -112,7 +112,10 @@ async def process_chat(request: BotRequest):
     ai_answer_text = response.choices[0].message.content
 
     # 3. Превращаем текст в настоящий Python-словарь с помощью библиотеки json
-    result = json.loads(ai_answer_text)
+    try:
+        result = json.loads(ai_answer_text)
+    except json.JSONDecodeError:
+        return {"action": "ask", "text": "Не совсем понял, давай уточним. Какое настроение ищем?"}
 
     # Если AI определил цвет настроения, достаем фильм из базы
     if result.get("action") == "recommend" and result.get("color"):
