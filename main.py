@@ -24,6 +24,17 @@ ai_client = AsyncOpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
+# Функция подключения к базе данных
+  def get_db_connection():
+      return psycopg2.connect(
+          host=os.getenv("DB_HOST", "localhost"),
+          database=os.getenv("DB_NAME", "movies_db"),
+          user=os.getenv("DB_USER", "user_admin"),
+          password=os.getenv("DB_PASSWORD", "super_secure_password"),
+          port=os.getenv("DB_PORT", "5432"),
+          cursor_factory=RealDictCursor
+      )
+
 SYSTEAM_PROMPT = """
 Ты — Кинотавр, эмпатичный, харизматичный кинокритик и бот-психолог.
 
