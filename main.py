@@ -21,6 +21,15 @@ class BotRequest(BaseModel):
 
 app = FastAPI()
 
+# Добавляем CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 ai_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
     base_url="https://api.groq.com/openai/v1"
