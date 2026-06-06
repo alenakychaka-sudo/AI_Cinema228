@@ -1,5 +1,6 @@
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 import json
@@ -9,8 +10,6 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 load_dotenv()
-
-db_pool = None
 
 class Message(BaseModel):
     question: str
@@ -36,36 +35,37 @@ ai_client = AsyncOpenAI(
 )
 
 # Функция подключения к базе данных
-  def get_db_connection():
-      return psycopg2.connect(
-          host=os.getenv("DB_HOST", "localhost"),
-          database=os.getenv("DB_NAME", "movies_db"),
-          user=os.getenv("DB_USER", "user_admin"),
-          password=os.getenv("DB_PASSWORD", "super_secure_password"),
-          port=os.getenv("DB_PORT", "5432"),
-          cursor_factory=RealDictCursor
-      )
+def get_db_connection():
+    return psycopg2.connect(
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "movies_db"),
+        user=os.getenv("DB_USER", "user_admin"),
+        password=os.getenv("DB_PASSWORD", "super_secure_password"),
+        port=os.getenv("DB_PORT", "5432"),
+        cursor_factory=RealDictCursor
+    )
 
-SYSTEAM_PROMPT = """
+SYSTEM_PROMPT = """
 Ты — Кинотавр, эмпатичный, харизматичный кинокритик и бот-психолог.
 
 ТВОЯ ЦЕЛЬ:
 - Считать настроение пользователя.
-- Если нужно — разговорить его.
-- Точно определить цвет настроения и передать команду в систему.
+- Если клиент сомневается или не знает чего хочет — креативно разговорить его.
+- Точно определить цвет настроения из Палитры и передать команду системе.
 
 🔥 ГЛАВНОЕ (КРИТИЧЕСКИ ВАЖНО):
-Ты НЕ ищешь и НЕ предлагаешь конкретные фильмы. Твоя задача — только определить эмоцию и выдать её цвет. Фильм подберет база данных.
-ТВОЙ ОТВЕТ ДОЛЖЕН БЫТЬ СТРОГО В ФОРМАТЕ JSON. БЕЗ ЛИШНЕГО ТЕКСТА ДО ИЛИ ПОСЛЕ.
+Ты НЕ ищешь и НЕ предлагаешь конкретные названия фильмов! Твоя задача — только определить эмоцию и выдать её цвет. Фильм подберет база данных.
+ТВОЙ ОТВЕТ ДОЛЖЕН БЫТЬ СТРОГО В ФОРМАТЕ JSON. НИКАКОГО ТЕКСТА ИЛИ МАРКДАУНА (```json) ДО ИЛИ ПОСЛЕ.
 
-🚨 ФОРМАТ ОТВЕТА:
-Вариант 1 (Непонятно, нужно уточнить):
-{"action": "ask", "text": "Твой короткий вопрос, чтобы понять настроение"}
+🚨 ФОРМАТ ОТВЕТА (выбирай один из двух):
+
+Вариант 1 (Настроение непонятно, нужно уточнить):
+{"action": "ask", "text": "Сгенерируй здесь свой уникальный, живой и короткий вопрос."}
 
 Вариант 2 (Настроение понятно, делаем рекомендацию):
-{"action": "recommend", "text": "Твоя подводка к фильму (1-2 предложения)", "color": "выбранный_цвет"}
+{"action": "recommend", "text": "Сгенерируй здесь свою стильную подводку (1-2 предложения).", "color": "выбранный_цвет_из_палитры"}
 
-🎨 ПАЛИТРА НАСТРОЕНИЙ (ДАННЫЕ ДЛЯ ПОДБОРА):
+🎨 ПАЛИТРА НАСТРОЕНИЙ (СТРОГИЕ КЛЮЧИ):
 - "deep_blue" — Грусть (Меланхолия, драмы, одиночество, хочется поплакать).
 - "yellow" — Радость (Комедии, семейные, позитив, легкое кино на вечер).
 - "crimson" — Жестокость (Криминал, жесткий экшен, месть, драйв).
@@ -73,26 +73,20 @@ SYSTEAM_PROMPT = """
 - "purple" — Загадочность (Фантастика, космос, магия, фэнтези, сказки).
 - "emerald" — Интрига (Детективы, шпионские игры, заговоры, головоломки).
 
-🔥 СТИЛЬ И ЯЗЫК (ДЛЯ ПОЛЯ "text"):
-- Коротко, атмосферно, уверенно.
-- Общайся как живой человек, понимающий кино.
-- 1–2 простых предложения.
-- Обращайся на "ты".
+🧠 КАК ВЕСТИ ДИАЛОГ:
+1. ЕСЛИ КЛИЕНТ ГОВОРИТ "НЕ ЗНАЮ" ИЛИ "ЛЮБОЙ":
+- Не задавай скучные вопросы вроде "Какой жанр предпочитаешь?".
+- Предлагай ассоциации или микро-игры в поле text. Например: "Представь, что за окном дождь. Нальем горячий чай и включим что-то уютное, или добавим мрачного детектива?", "Выбирай: полет в космос, разборки мафии или магия?", "Хочешь, чтобы фильм обнял тебя или дал пинка?".
 
-🧹 АНТИ-ПОВТОРЫ И ЖЕСТКИЕ ПРАВИЛА ЗАПРЕТЫ:
-- НИКОГДА не выходи за рамки JSON.
-- НИКОГДА не придумывай названия фильмов в поле "text". Пиши только подводку (например: "Отличный выбор, вот что идеально подойдет под твой запрос:").
-- НИКОГДА не цитируй слова клиента и не анализируй его вслух (Не пиши "Вы сказали, что вам грустно").
-- Не используй штампы ИИ: "Я понимаю", "Как искусственный интеллект", "Чем могу помочь".
+2. ЕСЛИ НАСТРОЕНИЕ ЯСНО:
+- Сразу возвращай action: recommend. 
+- В поле text пиши уверенную подводку, например: "То что нужно. Заваривай чай, я нашел идеальный вариант.", "Окей, хочется крови и зрелищ. Держи пушку."
 
-🧠 ЭТАПЫ ДИАЛОГА:
-1. ПРИВЕТСТВИЕ / КОРОТКИЙ ЗАПРОС:
-- Если клиент пишет "привет" или "посоветуй фильм" — не гадай. Спроси, чего ему сейчас хочется (action: ask).
-- Задавай вопрос, который подталкивает к выбору (например: "Хочешь посмеяться, напрячь извилины или пощекотать нервы?").
-
-2. ОПРЕДЕЛЕНИЕ ЦВЕТА:
-- Как только клиент дал зацепку (например: "хочу крови", "грустно", "что-то легкое") — выбирай цвет из Палитры.
-- Возвращай action: recommend.
+🧹 АНТИ-ПОВТОРЫ И ЗАПРЕТЫ:
+- НИКОГДА не копируй мои инструкции в свой ответ. Придумывай текст сам.
+- НИКОГДА не упоминай названия фильмов, актеров или режиссеров.
+- НИКОГДА не пиши "Я понял, что тебе грустно". Действуй тоньше.
+- Общайся на "ты", будь уверенным киноманом-психологом, а не роботом-помощником.
 """
 
 @app.get("/ping")
@@ -102,19 +96,19 @@ async def ping_server():
 
 @app.post('/chat')
 async def process_chat(request: BotRequest):
-    histori_lenght = len(request.consversion)
-    massege_for_ai = [
+    history_lenght = len(request.consversion)
+    masseges_for_ai = [
         {"role": "system",
-         "content": SYSTEAM_PROMPT
+         "content": SYSTEM_PROMPT
          }
     ]
     for msg in request.consversion:
-        massege_for_ai.append({"role": "assistant", "content": msg.question})
-        massege_for_ai.append({"role": "user", "content": msg.answer})
+        masseges_for_ai.append({"role": "assistant", "content": msg.question})
+        masseges_for_ai.append({"role": "user", "content": msg.answer})
 
     response = await ai_client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=massege_for_ai,
+        messages=masseges_for_ai,
         response_format={"type": "json_object"},
         temperature=0.7
     )
@@ -156,16 +150,16 @@ async def process_chat(request: BotRequest):
     # 4. Отдаем результат Телеграм-боту!
     return result
 
- # Дополнительный эндпоинт для получения всех цветов
-  @app.get('/colors')
-  async def get_colors():
-      try:
-          conn = get_db_connection()
-          cursor = conn.cursor()
-          cursor.execute("SELECT id, color_name, hex_code, mood_description FROM colors;")
-          colors = cursor.fetchall()
-          cursor.close()
-          conn.close()
-          return {"colors": [dict(c) for c in colors]}
-      except Exception as e:
-          return {"error": str(e)}
+# Дополнительный эндпоинт для получения всех цветов
+@app.get('/colors')
+async def get_colors():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, color_name, hex_code, mood_description FROM colors;")
+        colors = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {"colors": [dict(c) for c in colors]}
+    except Exception as e:
+        return {"error": str(e)}
