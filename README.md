@@ -53,17 +53,17 @@ start_bot.bat
 
 ### tg_bot/.env
 ```
-TELEGRAM_BOT_TOKEN=8534661552:AAGZ1ykDRGnprGx0OuE9aQxTbGal56y0Du0
-API_URL=http://localhost:7777/chat
+TELEGRAM_BOT_TOKEN=8534......
+API_URL=
 ```
 
 ### .env (корневой)
 ```
 OPENAI_API_KEY=gsk_...
-DB_HOST=localhost
-DB_NAME=movies_db
-DB_USER=user_admin
-DB_PASSWORD=super_secure_password
+DB_HOST
+DB_NAME
+DB_USER
+DB_PASSWORD
 DB_PORT=5432
 ```
 
